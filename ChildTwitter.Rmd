@@ -1,0 +1,112 @@
+---
+title: "Twitter Analysis in R"
+author: "Jason Williams"
+date: "August 8, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+##Examining Trends in Childcare in Major Cadence Cities
+
+##Load Required Packages
+
+library(RCurl)
+library(ROAuth)
+library(twitteR)
+library(plyr)
+library(dplyr)
+library(stringr)
+library(wordcloud)
+library(ggmap)
+library(tm)
+library(httr)
+
+##Set Local Director and Set up (Direct) Authentication
+
+key = 'jyAE1j6p9rjoSiftvz8vK1DA8'
+secret = 'aKSjuVMqrvMhSQkOFDbHipVTyfwBOigSmVFuGmL7shBagChcb5'
+token = '759061397250580480-ntwsCNW44Vw8EdwEHOUY3c9WAanaLul'
+token_secret = 'k1IUdgluy1l56cJ5qLIwRUfFSaPpJBsoV7tMwfKR8HA9d'
+
+setwd("~/R/EdX/TwitterStuff")
+
+download.file(url='http://curl.haxx.se/ca/cacert.pem',
+              destfile = "~/R/EdX/TwitterStuff/cacert.pem",
+              method = 'auto')
+
+authentication <- OAuthFactory$new(consumerKey = key,
+                                   consumerSecret = secret,
+                                   requestURL="https://api.twitter.com/oauth/request_token",
+                                   accessURL="https://api.twitter.com/oauth/access_token",
+                                   authURL="https://api.twitter.com/oauth/authorize")
+
+
+setup_twitter_oauth(key, secret, token, token_secret)
+
+##Select Cities To Use
+
+N = 1000 #10 tweets from each city
+s = 200 #200 mile radius
+
+lats <- c(33.4,32.8,29.8,39.7,35.6)
+
+lons <- c(112.1, 96.8, 95.4,105.0, 121.5)
+
+searchTwitter('childcare')
+
+child =do.call(rbind,lapply(1:length(lats), function(i) searchTwitter('child+care',
+                                                                       lang="en",n=N,resultType="recent",
+                                                                       geocode=paste(lats[i],lons[i],paste0(s,"mi"),sep=","))))
+
+child = searchTwitter('child+care', lang = "en", n = 1000, resultType = "recent")
+
+#Grab the Lat / Longitudes for each tweet. 
+
+childlat=sapply(child, function(x) as.numeric(x$getLatitude()))
+childlat=sapply(childlat, function(z) ifelse(length(z)==0,NA,z)) 
+
+childlon=sapply(child, function(x) as.numeric(x$getLongitude()))
+childlon=sapply(childlon, function(z) ifelse(length(z)==0,NA,z)) 
+
+#Create Time of Tweet Variables
+
+childdate=lapply(child, function(x) x$getCreated())
+childdate=sapply(childdate,function(x) strftime(x, format="%Y-%m-%d %H:%M:%S",tz = "UTC"))
+
+#Get Actual Tweets
+
+childtext=sapply(child, function(x) x$getText())
+childtext=unlist(childtext)
+childtext=str_replace_all(childtext,"[^[:graph:]]", " ") 
+
+#Are the tweets retweets or favorites? How many of each?
+
+isretweet=sapply(child, function(x) x$getIsRetweet())
+retweeted=sapply(child, function(x) x$getRetweeted())
+retweetcount=sapply(child, function(x) x$getRetweetCount())
+
+favoritecount=sapply(child, function(x) x$getFavoriteCount())
+favorited=sapply(child, function(x) x$getFavorited())
+
+#Create dataset to examine
+
+
+data=as.data.frame(cbind(tweet=childtext,date=childdate,lat=childlat,lon=childlon,
+                         isretweet=isretweet,retweeted=retweeted, retweetcount=retweetcount,favoritecount=favoritecount,favorited=favorited))
+
+#Clean Up Twitter Data to create word cloud
+
+corpus = Corpus(VectorSource(data$tweet))
+corpus = tm_map(corpus,tolower)
+corpus = tm_map(corpus, function(x)
+  removeWords(x, stopwords()))
+
+corpus = tm_map(corpus, PlainTextDocument)
+
+#Finally Create the word cloud
+
+col = brewer.pal(6,"Dark2")
+wordcloud(corpus, min.freq = 50, scale = c(4,2), rot.per = 0.25,
+          random.color = T, max.word = 40,
+          random.order = F, colors = col)
+```
