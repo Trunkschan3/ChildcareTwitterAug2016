@@ -23,10 +23,10 @@ library(httr)
 
 ##Set Local Director and Set up (Direct) Authentication
 
-key = 'jyAE1j6p9rjoSiftvz8vK1DA8'
-secret = 'aKSjuVMqrvMhSQkOFDbHipVTyfwBOigSmVFuGmL7shBagChcb5'
-token = '759061397250580480-ntwsCNW44Vw8EdwEHOUY3c9WAanaLul'
-token_secret = 'k1IUdgluy1l56cJ5qLIwRUfFSaPpJBsoV7tMwfKR8HA9d'
+key = 'xxx'
+secret = 'xxx'
+token = 'xxx'
+token_secret = 'xxx'
 
 setwd("~/R/EdX/TwitterStuff")
 
